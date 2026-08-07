@@ -305,6 +305,33 @@ function DocShell() {
         >
           <entry.Component />
         </article>
+
+        <footer className="mx-auto max-w-3xl px-6 pb-10 sm:px-10 lg:px-12">
+          <div className="flex items-center justify-between gap-3 border-t border-border pt-5">
+            <span className="text-xs text-muted-foreground">
+              {entry.title} · API Docs
+            </span>
+            <a
+              href="https://weldrr.app"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span className="inline-flex size-3.5 items-center justify-center rounded-[3px] bg-foreground text-background">
+                <svg viewBox="0 0 24 24" fill="none" className="h-2.5 w-2.5" aria-hidden="true">
+                  <path
+                    d="M4.5 19 L8.5 5 L11.5 13 L14.5 5 L18.5 19"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              Powered by Weldrr
+            </a>
+          </div>
+        </footer>
       </main>
       <OnThisPage toc={toc} />
     </div>
