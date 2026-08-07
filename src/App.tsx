@@ -61,19 +61,32 @@ function slugify(text: string): string {
 
 /* ---------------------------------- Brand ---------------------------------- */
 
+function WMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      className={className}
+      style={{ transform: "rotate(180deg)" }}
+    >
+      <path
+        d="M4.5 19 L8.5 5 L11.5 13 L14.5 5 L18.5 19"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="21" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
 function Brand() {
   return (
     <div className="flex shrink-0 items-center gap-2.5">
       <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-foreground text-background">
-        <svg viewBox="0 0 24 24" fill="none" className="h-4.5 w-4.5" aria-hidden="true">
-          <path
-            d="M4.5 19 L8.5 5 L11.5 13 L14.5 5 L18.5 19"
-            stroke="currentColor"
-            strokeWidth="2.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <WMark className="h-4.5 w-4.5" />
       </span>
       <span className="text-sm font-semibold tracking-tight">API Docs</span>
     </div>
@@ -318,15 +331,7 @@ function DocShell() {
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               <span className="inline-flex size-3.5 items-center justify-center rounded-[3px] bg-foreground text-background">
-                <svg viewBox="0 0 24 24" fill="none" className="h-2.5 w-2.5" aria-hidden="true">
-                  <path
-                    d="M4.5 19 L8.5 5 L11.5 13 L14.5 5 L18.5 19"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <WMark className="h-2.5 w-2.5" />
               </span>
               Powered by Weldrr
             </a>
