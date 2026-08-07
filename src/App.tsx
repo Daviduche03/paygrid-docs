@@ -197,8 +197,8 @@ function ThemeToggle() {
 
 function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <aside className="hidden w-60 shrink-0 border-r border-border lg:block">
-      <nav className="sticky top-[6.75rem] max-h-[calc(100vh-6.75rem)] space-y-0.5 overflow-y-auto p-4">
+    <aside className="sticky top-[6.75rem] hidden h-[calc(100vh-6.75rem)] w-60 shrink-0 overflow-y-auto border-r border-border lg:block">
+      <nav className="space-y-0.5 p-4">
         <div className="px-3 pb-2 pt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           Pages
         </div>
@@ -231,8 +231,8 @@ type TocItem = { id: string; text: string; level: number };
 function OnThisPage({ toc }: { toc: TocItem[] }) {
   if (toc.length === 0) return null;
   return (
-    <aside className="hidden w-56 shrink-0 border-l border-border xl:block">
-      <nav className="sticky top-[6.75rem] max-h-[calc(100vh-6.75rem)] overflow-y-auto p-5">
+    <aside className="sticky top-[6.75rem] hidden h-[calc(100vh-6.75rem)] w-56 shrink-0 overflow-y-auto border-l border-border xl:block">
+      <nav className="p-5">
         <div className="pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           On this page
         </div>
