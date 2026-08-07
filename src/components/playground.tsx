@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Check, Send, LoaderCircle, TerminalSquare } from "lucide-react";
+import { Copy, Check, Send, LoaderCircle, TerminalSquare, Plus, X, ShieldAlert } from "lucide-react";
 import endpointsData from "../data/endpoints.json";
 
 type Param = { name: string; in: "path" | "query"; type: string; required?: boolean };
@@ -14,7 +14,9 @@ type Endpoint = {
   auth?: string;
 };
 
-type EndpointsData = { baseUrl: string; endpoints: Endpoint[] };
+type HeaderRow = { id: number; name: string; value: string };
+
+type EndpointsData = { baseUrl: string; proxyUrl?: string; endpoints: Endpoint[] };
 const data = endpointsData as EndpointsData;
 
 const methodColors: Record<string, string> = {
@@ -53,6 +55,8 @@ export function Playground() {
   const [authToken, setAuthToken] = useState(() => localStorage.getItem("weldrr-pg-token") ?? "");
   const [paramValues, setParamValues] = useState<Record<string, string>>({});
   const [bodyText, setBodyText] = useState("");
+  const [customHeaders, setCustomHeaders] = useState<HeaderRow[]>([]);
+  const [proxyUsed, setProxyUsed] = useState(false);
   const [showCurl, setShowCurl] = useState(false);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -64,6 +68,8 @@ export function Playground() {
   useEffect(() => {
     setParamValues({});
     setBodyText("");
+    setCustomHeaders([]);
+    setProxyUsed(false);
     setResponse(null);
     setError(null);
   }, [selected]);
@@ -93,9 +99,18 @@ export function Playground() {
     return `${baseUrl.replace(/\/+$/, "")}${path}${qs.length ? `?${qs.join("&")}` : ""}`;
   }
 
+  function customHeaderPairs(): { name: string; value: string }[] {
+    return customHeaders
+      .map((h) => ({ name: h.name.trim(), value: h.value.trim() }))
+      .filter((h) => h.name !== "");
+  }
+
   function buildCurl(): string {
     const url = buildUrl();
     const parts = [`curl -X ${endpoint.method} '${url}'`];
+    for (const h of customHeaderPairs()) {
+      parts.push(`-H '${h.name}: ${h.value.replace(/'/g, "'\\''")}'`);
+    }
     if (authToken) parts.push(`-H 'Authorization: Bearer ${authToken}'`);
     if (endpoint.requestBody && bodyText.trim()) {
       parts.push(`-H 'Content-Type: application/json'`);
@@ -104,29 +119,67 @@ export function Playground() {
     return parts.join(" \\\n  ");
   }
 
+  async function doFetch(url: string, viaProxy: boolean): Promise<{ status: number; statusText: string; body: string }> {
+    const headers: Record<string, string> = {};
+    for (const h of customHeaderPairs()) headers[h.name] = h.value;
+    if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+    if (endpoint.requestBody && bodyText.trim()) headers["Content-Type"] = "application/json";
+
+    if (viaProxy) {
+      const proxyUrl = data.proxyUrl?.replace(/\/+$/, "");
+      if (!proxyUrl) throw new Error("No proxy configured for this docs site");
+      const res = await fetch(proxyUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url,
+          method: endpoint.method,
+          headers,
+          body: endpoint.requestBody && bodyText.trim() ? bodyText : undefined,
+        }),
+        signal: AbortSignal.timeout(40_000),
+      });
+      const text = await res.text();
+      return { status: res.status, statusText: res.statusText || "", body: text };
+    }
+
+    const res = await fetch(url, {
+      method: endpoint.method,
+      headers,
+      body: endpoint.requestBody && bodyText.trim() ? bodyText : undefined,
+      signal: AbortSignal.timeout(30_000),
+    });
+    const text = await res.text();
+    return { status: res.status, statusText: res.statusText, body: text };
+  }
+
   async function send() {
     setLoading(true);
     setError(null);
     setResponse(null);
+    setProxyUsed(false);
     const started = performance.now();
+    const url = buildUrl();
     try {
-      const headers: Record<string, string> = {};
-      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
-      if (endpoint.requestBody && bodyText.trim()) headers["Content-Type"] = "application/json";
-      const res = await fetch(buildUrl(), {
-        method: endpoint.method,
-        headers,
-        body: endpoint.requestBody && bodyText.trim() ? bodyText : undefined,
-        signal: AbortSignal.timeout(30_000),
-      });
-      const text = await res.text();
-      setResponse({ status: res.status, statusText: res.statusText, body: text, timeMs: performance.now() - started });
+      const result = await doFetch(url, false);
+      setResponse({ ...result, timeMs: performance.now() - started });
     } catch (err) {
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      if (!isAbort && data.proxyUrl) {
+        try {
+          const proxied = await doFetch(url, true);
+          setProxyUsed(true);
+          setResponse({ ...proxied, timeMs: performance.now() - started });
+          return;
+        } catch {
+          // fall through to the direct-fetch error message
+        }
+      }
       setError(
         err instanceof Error
-          ? err.name === "AbortError"
+          ? isAbort
             ? "Request timed out after 30s."
-            : `Could not reach the API (${err.message}). If the API does not allow browser requests (CORS), use the cURL command instead.`
+            : `Could not reach the API directly (${err.message}). This is usually a CORS block — the request was not sent to the server. Use the cURL command, or if a proxy is configured, it will be attempted automatically.`
           : "Request failed.",
       );
     } finally {
@@ -184,7 +237,7 @@ export function Playground() {
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
                 spellCheck={false}
-                className="w-full rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                className="w-full rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30"
               />
             </div>
 
@@ -203,7 +256,7 @@ export function Playground() {
                         onChange={(e) => setParamValues((v) => ({ ...v, [p.name]: e.target.value }))}
                         placeholder={p.required ? `${p.name} (required)` : `${p.name} (optional)`}
                         spellCheck={false}
-                        className="w-full rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                        className="w-full rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30"
                       />
                     </div>
                   ))}
@@ -218,8 +271,60 @@ export function Playground() {
                 onChange={(e) => setAuthToken(e.target.value)}
                 placeholder="API key or bearer token"
                 spellCheck={false}
-                className="w-full rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                className="w-full rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30"
               />
+            </div>
+
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="block text-xs font-medium text-muted-foreground">Headers</label>
+                <button
+                  type="button"
+                  onClick={() => setCustomHeaders((hs) => [...hs, { id: Date.now(), name: "", value: "" }])}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary transition-opacity hover:opacity-80"
+                >
+                  <Plus size={12} />
+                  Add header
+                </button>
+              </div>
+              {customHeaders.length === 0 ? (
+                <p className="text-xs text-muted-foreground/60">
+                  Optional custom headers (e.g. <span className="font-mono">X-API-Key</span>).
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {customHeaders.map((h) => (
+                    <div key={h.id} className="flex items-center gap-2">
+                      <input
+                        value={h.name}
+                        onChange={(e) =>
+                          setCustomHeaders((hs) => hs.map((x) => (x.id === h.id ? { ...x, name: e.target.value } : x)))
+                        }
+                        placeholder="Header"
+                        spellCheck={false}
+                        className="w-36 shrink-0 rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                      />
+                      <input
+                        value={h.value}
+                        onChange={(e) =>
+                          setCustomHeaders((hs) => hs.map((x) => (x.id === h.id ? { ...x, value: e.target.value } : x)))
+                        }
+                        placeholder="Value"
+                        spellCheck={false}
+                        className="w-full rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCustomHeaders((hs) => hs.filter((x) => x.id !== h.id))}
+                        aria-label="Remove header"
+                        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {endpoint.requestBody && (
@@ -233,7 +338,7 @@ export function Playground() {
                   rows={6}
                   spellCheck={false}
                   placeholder={endpoint.requestBody.schema ? `// ${endpoint.requestBody.schema}` : "{}"}
-                  className="w-full resize-y rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                  className="w-full resize-y rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30"
                 />
               </div>
             )}
@@ -296,6 +401,12 @@ export function Playground() {
             {response && (
               <span className="font-mono text-[10px] text-muted-foreground">
                 {response.timeMs.toFixed(0)}ms
+              </span>
+            )}
+            {proxyUsed && response && (
+              <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-0.5 font-mono text-[10px] text-muted-foreground" title="The browser could not reach the API directly (CORS), so this request was relayed through a server-side proxy.">
+                <ShieldAlert size={10} />
+                via proxy
               </span>
             )}
           </div>

@@ -91,7 +91,7 @@ function Brand() {
   return (
     <div className="flex shrink-0 items-center gap-2.5">
       <WMark className="h-5 w-5 text-primary" />
-      <span className="text-sm font-semibold tracking-tight">API Docs</span>
+      <span className="text-sm font-semibold tracking-tight text-foreground">API Docs</span>
     </div>
   );
 }
@@ -148,7 +148,7 @@ function ExpandableSearch({ onSelect }: { onSelect: (slug: string) => void }) {
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 120)}
           placeholder="Search docs…"
-          className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
         />
         {!open && (
           <kbd className="mr-2.5 shrink-0 rounded border border-border px-1 py-0.5 text-[10px] text-muted-foreground">
@@ -369,7 +369,7 @@ export default function App() {
   const isPlayground = location.pathname.startsWith("/docs/playground");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
         <div className="flex h-16 items-center justify-between gap-4 px-5 sm:px-8">

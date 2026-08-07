@@ -1,5 +1,6 @@
 {
   "baseUrl": "https://api.example.com",
+  "proxyUrl": "https://hot-wasp.outray.app/api/proxy",
   "endpoints": [
     {
       "method": "GET",
