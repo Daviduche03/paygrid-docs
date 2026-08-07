@@ -85,9 +85,7 @@ function WMark({ className }: { className?: string }) {
 function Brand() {
   return (
     <div className="flex shrink-0 items-center gap-2.5">
-      <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-foreground text-background">
-        <WMark className="h-4.5 w-4.5" />
-      </span>
+      <WMark className="h-5 w-5 text-primary" />
       <span className="text-sm font-semibold tracking-tight">API Docs</span>
     </div>
   );
@@ -330,9 +328,7 @@ function DocShell() {
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
-              <span className="inline-flex size-3.5 items-center justify-center rounded-[3px] bg-foreground text-background">
-                <WMark className="h-2.5 w-2.5" />
-              </span>
+              <WMark className="h-3.5 w-3.5" />
               Powered by Weldrr
             </a>
           </div>
