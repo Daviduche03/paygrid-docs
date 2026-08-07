@@ -6,7 +6,7 @@ import rehypePrettyCode from "rehype-pretty-code";
 import path from "node:path";
 
 export default defineConfig({
-  base: "/docs/",
+  base: "/",
   plugins: [
     {
       enforce: "pre",
