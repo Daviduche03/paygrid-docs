@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, NavLink, useParams, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, NavLink, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Home,
@@ -9,7 +9,9 @@ import {
   Sun,
   FileText,
   ChevronRight,
+  Play,
 } from "lucide-react";
+import { Playground } from "./components/playground";
 
 const docs = import.meta.glob("./docs/**/*.mdx", { eager: true }) as Record<
   string,
@@ -51,6 +53,9 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 const tabs = docEntries.filter((e) => PRIMARY_SLUGS.includes(e.slug));
+
+type NavItem = { slug: string; title: string };
+const navItems: NavItem[] = [...tabs.map((t) => ({ slug: t.slug, title: t.title })), { slug: "playground", title: "Playground" }];
 
 function slugify(text: string): string {
   return text
@@ -230,6 +235,23 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <span className="truncate">{entry.title}</span>
           </NavLink>
         ))}
+        <div className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Tools
+        </div>
+        <NavLink
+          to="/docs/playground"
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              isActive
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+            }`
+          }
+        >
+          <span className="shrink-0"><Play size={16} /></span>
+          <span className="truncate">Playground</span>
+        </NavLink>
       </nav>
     </aside>
   );
@@ -343,6 +365,8 @@ function DocShell() {
 
 export default function App() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isPlayground = location.pathname.startsWith("/docs/playground");
 
   return (
     <div className="min-h-screen bg-background">
@@ -366,7 +390,7 @@ export default function App() {
 
         {/* Sub-nav tabs */}
         <nav className="flex h-11 items-center gap-1 overflow-x-auto border-t border-border px-5 sm:px-8">
-          {tabs.map((entry) => (
+          {navItems.map((entry) => (
             <NavLink
               key={entry.slug}
               to={`/docs/${entry.slug}`}
@@ -386,8 +410,9 @@ export default function App() {
 
       {/* 3-column layout */}
       <div className="flex items-start">
-        <Sidebar />
+        {!isPlayground && <Sidebar />}
         <Routes>
+          <Route path="/docs/playground" element={<Playground />} />
           <Route path="/docs/*" element={<DocShell />} />
           <Route path="*" element={<Navigate to="/docs/index" replace />} />
         </Routes>

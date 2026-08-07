@@ -1,0 +1,77 @@
+{
+  "baseUrl": "https://api.example.com",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/customers",
+      "summary": "List customers",
+      "operationId": "listCustomers",
+      "params": [
+        { "name": "pageSize", "in": "query", "type": "number", "required": false },
+        { "name": "cursor", "in": "query", "type": "string", "required": false }
+      ],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "{ data: Customer[], meta }" }],
+      "auth": "customers.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/customers",
+      "summary": "Create or upsert a customer",
+      "operationId": "createCustomer",
+      "params": [],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ name, email?, phone?, country? }"
+      },
+      "responses": [{ "status": "200", "schema": "Customer" }],
+      "auth": "customers.write"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/customers/:id",
+      "summary": "Get a customer",
+      "operationId": "getCustomer",
+      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "Customer" }],
+      "auth": "customers.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/invoices",
+      "summary": "List invoices",
+      "operationId": "listInvoices",
+      "params": [
+        { "name": "pageSize", "in": "query", "type": "number", "required": false },
+        { "name": "status", "in": "query", "type": "string", "required": false }
+      ],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "{ data: Invoice[], meta }" }],
+      "auth": "invoices.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/invoices",
+      "summary": "Create an invoice",
+      "operationId": "createInvoice",
+      "params": [],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ customerId, amount, currency?, dueDate? }"
+      },
+      "responses": [{ "status": "201", "schema": "Invoice" }],
+      "auth": "invoices.write"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/transactions",
+      "summary": "List transactions",
+      "operationId": "listTransactions",
+      "params": [{ "name": "pageSize", "in": "query", "type": "number", "required": false }],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "{ data: Transaction[], meta }" }],
+      "auth": "transactions.read"
+    }
+  ]
+}
