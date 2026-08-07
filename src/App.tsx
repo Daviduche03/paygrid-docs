@@ -1,6 +1,15 @@
 import { Routes, Route, Navigate, NavLink, useParams, useNavigate } from "react-router-dom";
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { Menu, Search, Moon, Sun, FileText, BookOpen, Terminal, Webhook, CreditCard, KeyRound, Users, ChevronRight, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Home,
+  Rocket,
+  BookOpen,
+  Search,
+  Moon,
+  Sun,
+  FileText,
+  ChevronRight,
+} from "lucide-react";
 
 const docs = import.meta.glob("./docs/**/*.mdx", { eager: true }) as Record<
   string,
@@ -12,6 +21,8 @@ type DocEntry = {
   title: string;
   Component: React.ComponentType;
 };
+
+const PRIMARY_SLUGS = ["index", "getting-started", "api-reference"];
 
 const docEntries: DocEntry[] = Object.entries(docs)
   .map(([filepath, mod]) => {
@@ -26,85 +37,60 @@ const docEntries: DocEntry[] = Object.entries(docs)
   })
   .sort((a, b) => {
     const order: Record<string, number> = {
-      "index": 0,
+      index: 0,
       "getting-started": 1,
-      "api-keys": 2,
-      "api-reference": 3,
-      "customers": 4,
-      "virtual-accounts": 5,
-      "webhooks": 6,
+      "api-reference": 2,
     };
     return (order[a.slug] ?? 99) - (order[b.slug] ?? 99);
   });
 
 const iconMap: Record<string, React.ReactNode> = {
-  "index": <BookOpen size={18} />,
-  "getting-started": <Terminal size={18} />,
-  "virtual-accounts": <CreditCard size={18} />,
-  "webhooks": <Webhook size={18} />,
-  "api-keys": <KeyRound size={18} />,
-  "api-reference": <FileText size={18} />,
-  "customers": <Users size={18} />,
+  index: <Home size={18} />,
+  "getting-started": <Rocket size={18} />,
+  "api-reference": <BookOpen size={18} />,
 };
 
-function DocPage() {
-  const { "*": splat } = useParams();
-  const slug = splat || "index";
-  const entry = docEntries.find((e) => e.slug === slug);
+const tabs = docEntries.filter((e) => PRIMARY_SLUGS.includes(e.slug));
 
-  if (!entry) {
-    return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground">
-        Page not found
-      </div>
-    );
-  }
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
+/* ---------------------------------- Brand ---------------------------------- */
+
+function Brand() {
   return (
-    <article className="prose max-w-3xl mx-auto">
-      <entry.Component />
-    </article>
+    <div className="flex shrink-0 items-center gap-2.5">
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-foreground text-background">
+        <svg viewBox="0 0 24 24" fill="none" className="h-4.5 w-4.5" aria-hidden="true">
+          <path
+            d="M4.5 19 L8.5 5 L11.5 13 L14.5 5 L18.5 19"
+            stroke="currentColor"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+      <span className="text-sm font-semibold tracking-tight">API Docs</span>
+    </div>
   );
 }
 
-function ThemeToggle() {
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+/* -------------------------- Expandable search -------------------------- */
 
-  useEffect(() => {
-    const obs = new MutationObserver(() => {
-      setDark(document.documentElement.classList.contains("dark"));
-    });
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
-
-  function toggle() {
-    const next = !dark;
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-    setDark(next);
-  }
-
-  return (
-    <button
-      onClick={toggle}
-      className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-accent transition-colors text-muted-foreground"
-      aria-label="Toggle theme"
-    >
-      {dark ? <Sun size={16} /> : <Moon size={16} />}
-    </button>
-  );
-}
-
-function SearchInput({ onSelect }: { onSelect: (slug: string) => void }) {
-  const [query, setQuery] = useState("");
+function ExpandableSearch({ onSelect }: { onSelect: (slug: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const results = useMemo(() => {
-    if (!query.trim()) return [];
-    return docEntries.filter((e) =>
-      e.title.toLowerCase().includes(query.toLowerCase()),
-    );
+    const q = query.trim().toLowerCase();
+    if (!q) return docEntries;
+    return docEntries.filter((e) => e.title.toLowerCase().includes(q));
   }, [query]);
 
   useEffect(() => {
@@ -112,191 +98,272 @@ function SearchInput({ onSelect }: { onSelect: (slug: string) => void }) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setOpen(true);
+        inputRef.current?.focus();
       }
       if (e.key === "Escape") {
         setOpen(false);
-        setQuery("");
+        inputRef.current?.blur();
       }
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  function close() {
+    setOpen(false);
+    setQuery("");
+    inputRef.current?.blur();
+  }
+
   return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-2 h-9 px-3 border border-border rounded-md text-sm text-muted-foreground hover:bg-accent transition-colors w-full max-w-[320px]"
+    <div className="relative z-40">
+      <div
+        className={`flex h-9 items-center gap-2 rounded-full border transition-all duration-200 ${
+          open
+            ? "w-72 border-ring bg-background shadow-lg sm:w-[24rem]"
+            : "w-44 border-border bg-muted hover:bg-accent"
+        }`}
       >
-        <Search size={14} />
-        <span className="flex-1 text-left">Search docs...</span>
-        <kbd className="hidden sm:inline-flex items-center gap-1 text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
-          <span>⌘</span>K
-        </kbd>
-      </button>
+        <Search size={14} className="ml-3 shrink-0 text-muted-foreground" />
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          placeholder="Search docs…"
+          className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        />
+        {!open && (
+          <kbd className="mr-2.5 shrink-0 rounded border border-border px-1 py-0.5 text-[10px] text-muted-foreground">
+            ⌘K
+          </kbd>
+        )}
+      </div>
 
       {open && (
-        <div
-          className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]"
-          onClick={() => { setOpen(false); setQuery(""); }}
-        >
-          <div className="fixed inset-0 bg-black/40" />
-          <div
-            className="relative w-full max-w-[560px] bg-background border border-border rounded-lg shadow-lg overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+        <div className="absolute left-0 top-10 w-72 overflow-hidden rounded-xl border border-border bg-background shadow-xl sm:w-[24rem]">
+          <div className="max-h-[320px] overflow-y-auto p-1.5">
+            {results.length === 0 && query.trim() && (
+              <div className="px-3 py-4 text-center text-sm text-muted-foreground">
+                No results found
+              </div>
+            )}
+            {results.map((entry) => (
+              <button
+                key={entry.slug}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onSelect(entry.slug);
+                  close();
+                }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground hover:bg-accent"
+              >
+                <span className="shrink-0 text-muted-foreground">
+                  {iconMap[entry.slug] || <FileText size={16} />}
+                </span>
+                <span className="truncate">{entry.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------- Theme toggle ------------------------------- */
+
+function ThemeToggle() {
+  const [dark, setDark] = useState(() => localStorage.getItem("theme") !== "light");
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  }, [dark]);
+  return (
+    <button
+      type="button"
+      onClick={() => setDark((d) => !d)}
+      aria-label="Toggle theme"
+      className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+    >
+      {dark ? <Sun size={16} /> : <Moon size={16} />}
+    </button>
+  );
+}
+
+/* -------------------------------- Sidebar -------------------------------- */
+
+function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <aside className="hidden w-60 shrink-0 border-r border-border lg:block">
+      <nav className="sticky top-[6.75rem] max-h-[calc(100vh-6.75rem)] space-y-0.5 overflow-y-auto p-4">
+        <div className="px-3 pb-2 pt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Pages
+        </div>
+        {docEntries.map((entry) => (
+          <NavLink
+            key={entry.slug}
+            to={`/docs/${entry.slug}`}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              }`
+            }
           >
-            <div className="flex items-center gap-2 px-4 h-12 border-b border-border">
-              <Search size={14} className="text-muted-foreground shrink-0" />
-              <input
-                autoFocus
-                placeholder="Search documentation..."
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              <button onClick={() => { setOpen(false); setQuery(""); }} className="text-muted-foreground hover:text-foreground">
-                <X size={14} />
-              </button>
-            </div>
-            <div className="max-h-[320px] overflow-y-auto p-2">
-              {results.length === 0 && query.trim() && (
-                <div className="text-sm text-muted-foreground px-2 py-4 text-center">No results found</div>
-              )}
-              {results.map((entry) => (
-                <button
-                  key={entry.slug}
-                  onClick={() => { onSelect(entry.slug); setOpen(false); setQuery(""); }}
-                  className="flex items-center gap-3 w-full px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors text-left"
-                >
-                  {iconMap[entry.slug] || <FileText size={18} className="text-muted-foreground" />}
-                  <span>{entry.title}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+            <span className="shrink-0">{iconMap[entry.slug] || <FileText size={16} />}</span>
+            <span className="truncate">{entry.title}</span>
+          </NavLink>
+        ))}
+      </nav>
+    </aside>
   );
 }
 
-function SidebarNav({ expanded, onNavigate }: { expanded: boolean; onNavigate: () => void }) {
+/* ------------------------------ On this page ------------------------------ */
+
+type TocItem = { id: string; text: string; level: number };
+
+function OnThisPage({ toc }: { toc: TocItem[] }) {
+  if (toc.length === 0) return null;
   return (
-    <nav className="flex-1 space-y-1 px-3 pt-4">
-      {docEntries.map((entry) => (
-        <NavLink
-          key={entry.slug}
-          to={`/docs/${entry.slug}`}
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            `flex items-center gap-3 h-10 px-3 rounded-md text-sm font-medium transition-colors ${
-              isActive
-                ? "bg-accent text-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-            }`
-          }
+    <aside className="hidden w-56 shrink-0 border-l border-border xl:block">
+      <nav className="sticky top-[6.75rem] max-h-[calc(100vh-6.75rem)] overflow-y-auto p-5">
+        <div className="pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          On this page
+        </div>
+        <ul className="space-y-1 border-l border-border">
+          {toc.map((item) => (
+            <li key={item.id}>
+              <a
+                href={`#${item.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className={`block truncate border-l transition-colors hover:text-foreground ${
+                  item.level === 2
+                    ? "ml-0 border-l-2 border-transparent py-1 text-[13px] font-medium text-muted-foreground hover:border-brand"
+                    : "ml-3 border-l-2 border-transparent py-0.5 text-xs text-muted-foreground/70 hover:border-brand"
+                }`}
+              >
+                {item.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </aside>
+  );
+}
+
+/* -------------------------------- Doc shell -------------------------------- */
+
+function DocShell() {
+  const { "*": splat } = useParams();
+  const slug = splat || "index";
+  const articleRef = useRef<HTMLElement>(null);
+  const [toc, setToc] = useState<TocItem[]>([]);
+
+  const entry = docEntries.find((e) => e.slug === slug);
+
+  useEffect(() => {
+    const el = articleRef.current;
+    if (!el) return;
+    const seen: Record<string, number> = {};
+    const items: TocItem[] = [];
+    el.querySelectorAll("h2, h3").forEach((h) => {
+      const text = h.textContent?.trim() || "";
+      if (!text) return;
+      let id = slugify(text);
+      seen[id] = (seen[id] ?? 0) + 1;
+      if (seen[id] > 1) id = `${id}-${seen[id]}`;
+      h.id = id;
+      items.push({ id, text, level: h.tagName === "H2" ? 2 : 3 });
+    });
+    setToc(items);
+  }, [slug]);
+
+  if (!entry) {
+    return (
+      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+        Page not found
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 flex-1">
+      <main className="min-w-0 flex-1">
+        <article
+          ref={articleRef}
+          className="prose mx-auto max-w-3xl px-6 py-10 sm:px-10 lg:px-12"
         >
-          <span className="shrink-0">{iconMap[entry.slug] || <FileText size={18} />}</span>
-          {expanded && (
-            <span className="whitespace-nowrap overflow-hidden transition-opacity duration-150 delay-75">
-              {entry.title}
-            </span>
-          )}
-        </NavLink>
-      ))}
-    </nav>
+          <entry.Component />
+        </article>
+      </main>
+      <OnThisPage toc={toc} />
+    </div>
   );
 }
 
-function MobileMenu({ onNavigate }: { onNavigate: (slug: string) => void }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="md:hidden w-9 h-9 flex items-center justify-center rounded-md hover:bg-accent transition-colors text-muted-foreground"
-      >
-        <Menu size={18} />
-      </button>
-      {open && (
-        <div className="fixed inset-0 z-[80] flex">
-          <div className="fixed inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="relative w-[280px] bg-background border-r border-border h-full flex flex-col">
-            <div className="flex items-center gap-3 h-16 px-4 border-b border-border">
-              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-foreground text-background">
-                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
-                  <path d="M4.5 19 L8.5 5 L11.5 13 L14.5 5 L18.5 19" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <span className="text-sm font-semibold">API Docs</span>
-              <button onClick={() => setOpen(false)} className="ml-auto text-muted-foreground hover:text-foreground">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto pb-4">
-              <SidebarNav expanded={true} onNavigate={() => setOpen(false)} />
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
+/* --------------------------------- App --------------------------------- */
 
 export default function App() {
   const navigate = useNavigate();
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
-
-  const handleSearchSelect = useCallback((slug: string) => {
-    navigate(`/docs/${slug}`);
-  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Fixed header */}
-      <header className="fixed top-0 left-0 right-0 z-[70] h-16 border-b border-border bg-background flex items-stretch">
-        <div className="hidden md:flex w-[70px] shrink-0 items-center justify-center border-r border-border">
-          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-foreground text-background">
-                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
-                  <path d="M4.5 19 L8.5 5 L11.5 13 L14.5 5 L18.5 19" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <span className="text-sm font-semibold">API Docs</span>
-        </div>
-        <div className="flex-1 flex items-center gap-4 px-4 md:px-6">
-          <MobileMenu onNavigate={handleSearchSelect} />
-          <div className="hidden sm:block flex-1 max-w-md">
-            <SearchInput onSelect={handleSearchSelect} />
-          </div>
-          <div className="ml-auto flex items-center gap-2">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
+        <div className="flex h-16 items-center justify-between gap-4 px-5 sm:px-8">
+          <Brand />
+          <ExpandableSearch onSelect={(slug) => navigate(`/docs/${slug}`)} />
+          <div className="flex shrink-0 items-center gap-2">
             <ThemeToggle />
+            <button
+              type="button"
+              onClick={() => navigate("/docs/getting-started")}
+              className="inline-flex h-9 items-center gap-1 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              Get started
+              <ChevronRight size={14} />
+            </button>
           </div>
         </div>
+
+        {/* Sub-nav tabs */}
+        <nav className="flex h-11 items-center gap-1 overflow-x-auto border-t border-border px-5 sm:px-8">
+          {tabs.map((entry) => (
+            <NavLink
+              key={entry.slug}
+              to={`/docs/${entry.slug}`}
+              className={({ isActive }) =>
+                `-mb-px inline-flex h-11 items-center whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`
+              }
+            >
+              {entry.title}
+            </NavLink>
+          ))}
+        </nav>
       </header>
 
-      {/* Sidebar */}
-      <aside
-        onMouseEnter={() => setSidebarExpanded(true)}
-        onMouseLeave={() => setSidebarExpanded(false)}
-        className="fixed left-0 z-[60] hidden md:flex flex-col border-r border-border bg-background transition-all duration-200 overflow-hidden"
-        style={{ top: "64px", height: "calc(100vh - 64px)", width: sidebarExpanded ? "240px" : "70px" }}
-      >
-        <SidebarNav expanded={sidebarExpanded} onNavigate={() => {}} />
-      </aside>
-
-      {/* Content */}
-      <main
-        className="transition-all duration-200"
-        style={{ marginLeft: sidebarExpanded ? "240px" : "70px", paddingTop: "64px" }}
-      >
-        <div className="px-4 md:px-8 py-8">
-          <Routes>
-            <Route path="/docs/*" element={<DocPage />} />
-            <Route path="*" element={<Navigate to="/docs/index" replace />} />
-          </Routes>
-        </div>
-      </main>
+      {/* 3-column layout */}
+      <div className="flex items-start">
+        <Sidebar />
+        <Routes>
+          <Route path="/docs/*" element={<DocShell />} />
+          <Route path="*" element={<Navigate to="/docs/index" replace />} />
+        </Routes>
+      </div>
     </div>
   );
 }

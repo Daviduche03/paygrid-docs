@@ -151,3 +151,9 @@
   border: 1px solid hsl(var(--border));
   max-width: 100%;
 }
+
+/* Keep headings clear of the sticky header when jumping via the on-this-page TOC */
+.prose h2,
+.prose h3 {
+  scroll-margin-top: 6rem;
+}
