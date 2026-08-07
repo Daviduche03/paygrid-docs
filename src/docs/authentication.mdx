@@ -1,0 +1,49 @@
+# Authentication
+
+Every PayGrid API request must include a bearer API key issued for your
+business. Send it as an `Authorization` header on each request:
+
+```
+Authorization: Bearer pk_live_...
+```
+
+## Scopes
+
+API keys grant access through OAuth-style scopes. Each endpoint lists the scope
+it requires in its reference page.
+
+| Scope | Grants access to |
+| --- | --- |
+| `customers.read` | Read customers and virtual accounts. |
+| `customers.write` | Create and update customers and virtual accounts. |
+| `invoices.read` | Read invoices. |
+| `invoices.write` | Create, update, send, and cancel invoices. |
+| `transactions.read` | Read transactions. |
+| `business.read` | Read the business profile. |
+| `webhook.read` | Read webhook subscriptions. |
+| `webhook.write` | Create, update, and delete webhook subscriptions. |
+
+An API key with an empty scope set bypasses the scope check and can access every
+public endpoint.
+
+## Errors
+
+| Status | Body |
+| --- | --- |
+| 401 | `{ success: false, error: string }` |
+| 403 | `{ success: false, error: string }` |
+
+A `401` means the API key is missing or invalid. A `403` means the key is valid
+but does not carry the scope the endpoint requires.
+
+## Webhook signing secrets
+
+When you create a webhook subscription, the response includes a one-time
+`signingSecret` used to verify events delivered to your endpoint. The secret is
+only returned at creation time — store it immediately.
+
+## See also
+
+- [Getting started](/docs/getting-started)
+- [Webhooks](/docs/webhooks)
+- [API reference](/docs/api-reference)

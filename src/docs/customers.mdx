@@ -1,0 +1,178 @@
+# Customers
+
+Customers are the entities you bill. PayGrid matches inbound transfers to a
+customer through their virtual accounts and associates invoices and
+transactions with them.
+
+Customer endpoints use the `customers.read` scope for reads and
+`customers.write` for writes.
+
+## Schemas
+
+### Customer
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Customer ID. |
+| `businessId` | string | Business the customer belongs to. |
+| `name` | string | Customer name. |
+| `email` | string | Primary email. |
+| `phone` | string | Phone number. |
+| `billingEmail` | string | Email used for billing. |
+| `country` | string | Country name. |
+| `countryCode` | string | ISO country code. |
+| `createdAt` | string | ISO timestamp. |
+| `updatedAt` | string | ISO timestamp. |
+
+### CustomerSummary
+
+The list variant of `Customer`, plus:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `invoiceCount` | number | Number of invoices for the customer. |
+
+## List customers
+
+`GET /api/v1/customers` — List customers for the authenticated business.
+Searchable, cursor-paginated, and sortable.
+
+**Operation ID:** `listCustomers` · **Auth:** `customers.read`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `cursor` | query | string | no | Pagination cursor from the previous page's `meta.cursor`. |
+| `pageSize` | query | number | no | Page size for cursor pagination. |
+| `q` | query | string | no | Free-text search on customer name and email. |
+| `sort` | query | string | no | Sort order, e.g. `created_at:asc`. |
+
+**Response `200`**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "cus_123",
+      "name": "Ada Lovelace",
+      "email": "ada@example.com",
+      "billingEmail": null,
+      "phone": null,
+      "country": "Nigeria",
+      "countryCode": "NG",
+      "createdAt": "2026-01-01T00:00:00Z",
+      "businessId": "biz_456",
+      "invoiceCount": 3
+    }
+  ],
+  "meta": { "cursor": null }
+}
+```
+
+**Errors:** `401` `{ success: false, error: string }` ·
+`403` `{ success: false, error: string }`
+
+### Example
+
+```bash
+curl "https://{your-api-host}/api/v1/customers?pageSize=50&q=ada" \
+  -H "Authorization: Bearer pk_live_..."
+```
+
+## Create a customer
+
+`POST /api/v1/customers` — Create a customer. Upserts by email: if a customer
+with the same email already exists, it is updated instead.
+
+**Operation ID:** `createCustomer` · **Auth:** `customers.write`
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | Customer name. |
+| `email` | string | no | Customer email. |
+| `phone` | string | no | Phone number. |
+| `billingEmail` | string | no | Billing email. |
+| `country` | string | no | Country name. |
+| `countryCode` | string | no | ISO country code. |
+
+**Response `201`**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "cus_123",
+    "businessId": "biz_456",
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "phone": null,
+    "billingEmail": null,
+    "country": "Nigeria",
+    "countryCode": "NG",
+    "createdAt": "2026-01-01T00:00:00Z",
+    "updatedAt": "2026-01-01T00:00:00Z"
+  }
+}
+```
+
+**Errors:** `400` `{ success: false, error: "name is required" }` ·
+`401` `{ success: false, error: string }` · `403` `{ success: false, error: string }`
+
+### Example
+
+```bash
+curl -X POST "https://{your-api-host}/api/v1/customers" \
+  -H "Authorization: Bearer pk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "country": "Nigeria",
+    "countryCode": "NG"
+  }'
+```
+
+## Fetch a customer
+
+`GET /api/v1/customers/:id` — Fetch a single customer.
+
+**Operation ID:** `getCustomer` · **Auth:** `customers.read`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | Customer ID. |
+
+**Response `200`** — `{ success: true, data: Customer }`
+
+**Errors:** `404` `{ success: false, error: "Customer not found" }`
+
+## Update a customer
+
+`PUT /api/v1/customers/:id` — Update a customer. Partial update — omitted
+fields keep their current values.
+
+**Operation ID:** `updateCustomer` · **Auth:** `customers.write`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | Customer ID. |
+
+**Request body** — any subset of `name`, `email`, `phone`, `billingEmail`,
+`country`, `countryCode`.
+
+**Response `200`** — `{ success: true, data: Customer }`
+
+**Errors:** `404` `{ success: false, error: "Customer not found" }`
+
+### Example
+
+```bash
+curl -X PUT "https://{your-api-host}/api/v1/customers/cus_123" \
+  -H "Authorization: Bearer pk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "+2348000000000"
+  }'
+```

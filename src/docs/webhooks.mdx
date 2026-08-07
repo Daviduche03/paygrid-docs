@@ -1,0 +1,144 @@
+# Webhooks
+
+Webhook subscriptions let PayGrid notify your backend when events occur, such as
+payments received or invoices paid.
+
+Webhook endpoints use the `webhook.read` scope for reads and `webhook.write`
+for writes.
+
+## Schemas
+
+### Webhook
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Webhook ID. |
+| `url` | string | Delivery URL. |
+| `description` | string | Description. |
+| `events` | array of string | Subscribed event types. |
+| `active` | boolean | Whether the subscription is active. |
+| `createdAt` | string | ISO timestamp. |
+| `updatedAt` | string | ISO timestamp. |
+
+### Event types
+
+Available webhook event types:
+
+`payment.received`, `payment.reversed`, `payment.failed`,
+`invoice.created`, `invoice.paid`, `invoice.overdue`,
+`reconciliation.completed`, `customer.created`, `account.provisioned`,
+`account.suspended`.
+
+## List webhooks
+
+`GET /api/v1/webhooks` — List webhook subscriptions for the business.
+
+**Operation ID:** `listWebhooks` · **Auth:** `webhook.read`
+
+**Response `200`** — `{ success: true, data: Webhook[] }`
+
+**Errors:** `401` `{ success: false, error: string }` ·
+`403` `{ success: false, error: string }`
+
+### Example
+
+```bash
+curl "https://{your-api-host}/api/v1/webhooks" \
+  -H "Authorization: Bearer pk_live_..."
+```
+
+## Create a webhook
+
+`POST /api/v1/webhooks` — Create a webhook subscription. Returns a one-time
+`signingSecret` — store it immediately, it is not shown again.
+
+**Operation ID:** `createWebhook` · **Auth:** `webhook.write`
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `url` | string | yes | Delivery URL. |
+| `description` | string | no | Description. |
+| `events` | array of string | no | Subscribed event types, default `[]`. |
+
+**Response `201`** — `{ success: true, data: { id, url, description, events, active, signingSecret, createdAt, updatedAt } }`
+
+**Errors:** `400` `{ success: false, error: "url is required" }`
+
+### Example
+
+```bash
+curl -X POST "https://{your-api-host}/api/v1/webhooks" \
+  -H "Authorization: Bearer pk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/hooks/paygrid",
+    "description": "Payment notifications",
+    "events": ["payment.received", "payment.failed"]
+  }'
+```
+
+## Fetch a webhook
+
+`GET /api/v1/webhooks/:id` — Fetch a webhook subscription.
+
+**Operation ID:** `getWebhook` · **Auth:** `webhook.read`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | Webhook ID. |
+
+**Response `200`** — `{ success: true, data: Webhook }`
+
+**Errors:** `404` `{ success: false, error: "Webhook not found" }`
+
+## Update a webhook
+
+`PUT /api/v1/webhooks/:id` — Update a webhook subscription (`url`,
+`description`, `events`, `active`). Partial update — omitted fields keep their
+current values.
+
+**Operation ID:** `updateWebhook` · **Auth:** `webhook.write`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | Webhook ID. |
+
+**Request body** — any subset of `url`, `description`, `events`, `active`.
+
+**Response `200`** — `{ success: true, data: Webhook }`
+
+**Errors:** `404` `{ success: false, error: "Webhook not found" }`
+
+### Example
+
+```bash
+curl -X PUT "https://{your-api-host}/api/v1/webhooks/wh_123" \
+  -H "Authorization: Bearer pk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "active": false
+  }'
+```
+
+## Delete a webhook
+
+`DELETE /api/v1/webhooks/:id` — Delete a webhook subscription.
+
+**Operation ID:** `deleteWebhook` · **Auth:** `webhook.write`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | Webhook ID. |
+
+**Response `200`** — `{ success: true, data: { id } }`
+
+**Errors:** `404` `{ success: false, error: "Webhook not found" }`
+
+### Example
+
+```bash
+curl -X DELETE "https://{your-api-host}/api/v1/webhooks/wh_123" \
+  -H "Authorization: Bearer pk_live_..."
+```

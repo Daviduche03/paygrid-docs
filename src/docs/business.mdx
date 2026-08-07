@@ -1,0 +1,61 @@
+# Business
+
+The business profile bound to your API key, including settlement details and
+platform charges.
+
+Business endpoints use the `business.read` scope.
+
+## Schema
+
+### Business
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Business ID. |
+| `name` | string | Business name. |
+| `baseCurrency` | string | Base currency. |
+| `countryCode` | string | ISO country code. |
+| `platformChargeRate` | number | Platform charge rate. |
+| `settlementBankName` | string | Settlement bank name. |
+| `settlementBankCode` | string | Settlement bank code. |
+| `settlementAccountNumber` | string | Settlement account number. |
+| `settlementAccountName` | string | Settlement account name. |
+| `createdAt` | string | ISO timestamp. |
+| `updatedAt` | string | ISO timestamp. |
+
+## Fetch the business profile
+
+`GET /api/v1/business` — Fetch the current business profile bound to the API
+key.
+
+**Operation ID:** `getBusiness` · **Auth:** `business.read`
+
+**Response `200`**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "biz_456",
+    "name": "Acme Trading",
+    "baseCurrency": "NGN",
+    "countryCode": "NG",
+    "platformChargeRate": 0.015,
+    "settlementBankName": "GTBank",
+    "settlementBankCode": "058",
+    "settlementAccountNumber": "0123456789",
+    "settlementAccountName": "Acme Trading",
+    "createdAt": "2025-01-01T00:00:00Z",
+    "updatedAt": "2026-01-01T00:00:00Z"
+  }
+}
+```
+
+**Errors:** `404` `{ success: false, error: "Business not found" }`
+
+### Example
+
+```bash
+curl "https://{your-api-host}/api/v1/business" \
+  -H "Authorization: Bearer pk_live_..."
+```

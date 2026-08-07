@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode/deepseek-v4-flash-free",
+  "mcp": {
+    "weldrr-callback": {
+      "type": "local",
+      "command": [
+        "node",
+        "/opt/weldrr/mcp-callback.mjs"
+      ],
+      "enabled": true
+    }
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": "allow",
+    "webfetch": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "read": "allow",
+    "task": "allow"
+  }
+}

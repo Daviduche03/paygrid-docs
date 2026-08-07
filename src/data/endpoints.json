@@ -8,34 +8,114 @@
       "summary": "List customers",
       "operationId": "listCustomers",
       "params": [
+        { "name": "cursor", "in": "query", "type": "string", "required": false },
         { "name": "pageSize", "in": "query", "type": "number", "required": false },
-        { "name": "cursor", "in": "query", "type": "string", "required": false }
+        { "name": "q", "in": "query", "type": "string", "required": false },
+        { "name": "sort", "in": "query", "type": "string", "required": false }
       ],
       "requestBody": null,
-      "responses": [{ "status": "200", "schema": "{ data: Customer[], meta }" }],
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: CustomerSummary[], meta: { cursor } }" },
+        { "status": "401", "schema": "{ success: false, error }" },
+        { "status": "403", "schema": "{ success: false, error }" }
+      ],
       "auth": "customers.read"
     },
     {
       "method": "POST",
       "path": "/api/v1/customers",
-      "summary": "Create or upsert a customer",
+      "summary": "Create a customer (upserts by email)",
       "operationId": "createCustomer",
       "params": [],
       "requestBody": {
         "contentType": "application/json",
-        "schema": "{ name, email?, phone?, country? }"
+        "schema": "{ name (required), email?, phone?, billingEmail?, country?, countryCode? }"
       },
-      "responses": [{ "status": "200", "schema": "Customer" }],
+      "responses": [
+        { "status": "201", "schema": "{ success: true, data: Customer }" },
+        { "status": "400", "schema": "{ success: false, error: \"name is required\" }" },
+        { "status": "401", "schema": "{ success: false, error }" },
+        { "status": "403", "schema": "{ success: false, error }" }
+      ],
       "auth": "customers.write"
     },
     {
       "method": "GET",
       "path": "/api/v1/customers/:id",
-      "summary": "Get a customer",
+      "summary": "Fetch a customer",
       "operationId": "getCustomer",
       "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
       "requestBody": null,
-      "responses": [{ "status": "200", "schema": "Customer" }],
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Customer }" },
+        { "status": "404", "schema": "{ success: false, error: \"Customer not found\" }" }
+      ],
+      "auth": "customers.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/customers/:id",
+      "summary": "Update a customer",
+      "operationId": "updateCustomer",
+      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ name?, email?, phone?, billingEmail?, country?, countryCode? }"
+      },
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Customer }" },
+        { "status": "404", "schema": "{ success: false, error: \"Customer not found\" }" }
+      ],
+      "auth": "customers.write"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/virtual-accounts",
+      "summary": "List virtual accounts",
+      "operationId": "listVirtualAccounts",
+      "params": [
+        { "name": "cursor", "in": "query", "type": "string", "required": false },
+        { "name": "pageSize", "in": "query", "type": "number", "required": false },
+        { "name": "q", "in": "query", "type": "string", "required": false },
+        { "name": "status", "in": "query", "type": "string", "required": false },
+        { "name": "customerId", "in": "query", "type": "string", "required": false }
+      ],
+      "requestBody": null,
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: VirtualAccountSummary[], meta: { cursor } }" },
+        { "status": "401", "schema": "{ success: false, error }" },
+        { "status": "403", "schema": "{ success: false, error }" }
+      ],
+      "auth": "customers.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/virtual-accounts",
+      "summary": "Create a virtual account",
+      "operationId": "createVirtualAccount",
+      "params": [],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ accountRef (required), accountName (required), accountNumber (required), customerId?, bankName?, currency?, expectedAmount? }"
+      },
+      "responses": [
+        { "status": "201", "schema": "{ success: true, data: VirtualAccount }" },
+        { "status": "400", "schema": "{ success: false, error: \"accountRef, accountName, and accountNumber are required\" }" },
+        { "status": "500", "schema": "{ success: false, error: \"Failed to create virtual account\" }" }
+      ],
+      "auth": "customers.write"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/virtual-accounts/:id",
+      "summary": "Fetch a virtual account",
+      "operationId": "getVirtualAccount",
+      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
+      "requestBody": null,
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: VirtualAccount }" },
+        { "status": "404", "schema": "{ success: false, error: \"Virtual account not found\" }" }
+      ],
       "auth": "customers.read"
     },
     {
@@ -44,11 +124,20 @@
       "summary": "List invoices",
       "operationId": "listInvoices",
       "params": [
+        { "name": "cursor", "in": "query", "type": "string", "required": false },
         { "name": "pageSize", "in": "query", "type": "number", "required": false },
-        { "name": "status", "in": "query", "type": "string", "required": false }
+        { "name": "q", "in": "query", "type": "string", "required": false },
+        { "name": "statuses", "in": "query", "type": "string", "required": false },
+        { "name": "customerIds", "in": "query", "type": "string", "required": false },
+        { "name": "dueFilter", "in": "query", "type": "string", "required": false },
+        { "name": "sort", "in": "query", "type": "string", "required": false }
       ],
       "requestBody": null,
-      "responses": [{ "status": "200", "schema": "{ data: Invoice[], meta }" }],
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: InvoiceSummary[], meta: { cursor } }" },
+        { "status": "401", "schema": "{ success: false, error }" },
+        { "status": "403", "schema": "{ success: false, error }" }
+      ],
       "auth": "invoices.read"
     },
     {
@@ -59,9 +148,71 @@
       "params": [],
       "requestBody": {
         "contentType": "application/json",
-        "schema": "{ customerId, amount, currency?, dueDate? }"
+        "schema": "{ invoiceNumber (required), amount (required), customerId?, virtualAccountId?, currency?, status?, issueDate?, dueDate?, lineItems? }"
       },
-      "responses": [{ "status": "201", "schema": "Invoice" }],
+      "responses": [
+        { "status": "201", "schema": "{ success: true, data: Invoice & { paymentUrl } }" },
+        { "status": "400", "schema": "{ success: false, error: \"invoiceNumber and amount are required\" }" },
+        { "status": "500", "schema": "{ success: false, error: \"Failed to create invoice\" }" }
+      ],
+      "auth": "invoices.write"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/invoices/:id",
+      "summary": "Fetch an invoice",
+      "operationId": "getInvoice",
+      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
+      "requestBody": null,
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Invoice & { paymentUrl } }" },
+        { "status": "404", "schema": "{ success: false, error: \"Invoice not found\" }" }
+      ],
+      "auth": "invoices.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/invoices/:id",
+      "summary": "Update an invoice",
+      "operationId": "updateInvoice",
+      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ customerId?, virtualAccountId?, amount?, currency?, status?, issueDate?, dueDate?, lineItems? }"
+      },
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Invoice & { paymentUrl } }" },
+        { "status": "404", "schema": "{ success: false, error: \"Invoice not found\" }" },
+        { "status": "500", "schema": "{ success: false, error: \"Failed to update invoice\" }" }
+      ],
+      "auth": "invoices.write"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/invoices/:id/cancel",
+      "summary": "Cancel an invoice",
+      "operationId": "cancelInvoice",
+      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
+      "requestBody": null,
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Invoice }" },
+        { "status": "400", "schema": "{ success: false, error: \"Cannot cancel invoice with status <status>\" }" },
+        { "status": "404", "schema": "{ success: false, error: \"Invoice not found\" }" }
+      ],
+      "auth": "invoices.write"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/invoices/:id/send",
+      "summary": "Send a draft invoice",
+      "operationId": "sendInvoice",
+      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
+      "requestBody": null,
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Invoice }" },
+        { "status": "400", "schema": "{ success: false, error: \"Only draft invoices can be sent\" }" },
+        { "status": "404", "schema": "{ success: false, error: \"Invoice not found\" }" }
+      ],
       "auth": "invoices.write"
     },
     {
@@ -69,10 +220,124 @@
       "path": "/api/v1/transactions",
       "summary": "List transactions",
       "operationId": "listTransactions",
-      "params": [{ "name": "pageSize", "in": "query", "type": "number", "required": false }],
+      "params": [
+        { "name": "cursor", "in": "query", "type": "string", "required": false },
+        { "name": "pageSize", "in": "query", "type": "number", "required": false },
+        { "name": "q", "in": "query", "type": "string", "required": false },
+        { "name": "status", "in": "query", "type": "string", "required": false },
+        { "name": "type", "in": "query", "type": "string", "required": false },
+        { "name": "customerId", "in": "query", "type": "string", "required": false },
+        { "name": "virtualAccountId", "in": "query", "type": "string", "required": false },
+        { "name": "reconciliationStatus", "in": "query", "type": "string", "required": false },
+        { "name": "dateFrom", "in": "query", "type": "string", "required": false },
+        { "name": "amountMin", "in": "query", "type": "number", "required": false },
+        { "name": "amountMax", "in": "query", "type": "number", "required": false }
+      ],
       "requestBody": null,
-      "responses": [{ "status": "200", "schema": "{ data: Transaction[], meta }" }],
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Transaction[], meta: { cursor } }" },
+        { "status": "401", "schema": "{ success: false, error }" },
+        { "status": "403", "schema": "{ success: false, error }" }
+      ],
       "auth": "transactions.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/transactions/:id",
+      "summary": "Fetch a transaction",
+      "operationId": "getTransaction",
+      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
+      "requestBody": null,
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Transaction }" },
+        { "status": "404", "schema": "{ success: false, error: \"Transaction not found\" }" }
+      ],
+      "auth": "transactions.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/business",
+      "summary": "Fetch the business profile",
+      "operationId": "getBusiness",
+      "params": [],
+      "requestBody": null,
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Business }" },
+        { "status": "404", "schema": "{ success: false, error: \"Business not found\" }" }
+      ],
+      "auth": "business.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/webhooks",
+      "summary": "List webhook subscriptions",
+      "operationId": "listWebhooks",
+      "params": [],
+      "requestBody": null,
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Webhook[] }" },
+        { "status": "401", "schema": "{ success: false, error }" },
+        { "status": "403", "schema": "{ success: false, error }" }
+      ],
+      "auth": "webhook.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/webhooks",
+      "summary": "Create a webhook subscription",
+      "operationId": "createWebhook",
+      "params": [],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ url (required), description?, events? }"
+      },
+      "responses": [
+        { "status": "201", "schema": "{ success: true, data: { id, url, description, events, active, signingSecret, createdAt, updatedAt } }" },
+        { "status": "400", "schema": "{ success: false, error: \"url is required\" }" }
+      ],
+      "auth": "webhook.write"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/webhooks/:id",
+      "summary": "Fetch a webhook subscription",
+      "operationId": "getWebhook",
+      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
+      "requestBody": null,
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Webhook }" },
+        { "status": "404", "schema": "{ success: false, error: \"Webhook not found\" }" }
+      ],
+      "auth": "webhook.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/webhooks/:id",
+      "summary": "Update a webhook subscription",
+      "operationId": "updateWebhook",
+      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ url?, description?, events?, active? }"
+      },
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: Webhook }" },
+        { "status": "404", "schema": "{ success: false, error: \"Webhook not found\" }" }
+      ],
+      "auth": "webhook.write"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/webhooks/:id",
+      "summary": "Delete a webhook subscription",
+      "operationId": "deleteWebhook",
+      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
+      "requestBody": null,
+      "responses": [
+        { "status": "200", "schema": "{ success: true, data: { id } }" },
+        { "status": "404", "schema": "{ success: false, error: \"Webhook not found\" }" }
+      ],
+      "auth": "webhook.write"
     }
   ]
 }

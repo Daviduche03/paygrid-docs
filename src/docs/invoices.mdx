@@ -1,0 +1,208 @@
+# Invoices
+
+Invoices are bills issued to customers. Creating an invoice returns it with a
+generated `paymentUrl` you can share, and PayGrid tracks payments against each
+invoice from reconciled transfers.
+
+Invoice endpoints use the `invoices.read` scope for reads and `invoices.write`
+for writes.
+
+## Schemas
+
+### Invoice
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Invoice ID. |
+| `businessId` | string | Business the invoice belongs to. |
+| `customerId` | string | Customer billed. |
+| `virtualAccountId` | string | Virtual account payments are matched against. |
+| `invoiceNumber` | string | Invoice number. |
+| `amount` | number | Invoice amount. |
+| `amountPaid` | number | Amount paid so far. |
+| `currency` | string | Invoice currency (default `NGN`). |
+| `status` | string | One of `draft`, `scheduled`, `unpaid`, `overdue`, `paid`, `canceled`, `refunded`. |
+| `issueDate` | string | Issue date. |
+| `dueDate` | string | Due date. |
+| `paidAt` | string | ISO timestamp when fully paid. |
+| `lineItems` | array | Invoice line items. |
+| `createdAt` | string | ISO timestamp. |
+| `updatedAt` | string | ISO timestamp. |
+
+### InvoiceSummary
+
+The list variant of `Invoice`, plus:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `customerName` | string | Billed customer name. |
+| `virtualAccountName` | string | Virtual account name. |
+| `virtualAccountNumber` | string | Virtual account number. |
+| `virtualAccountBankName` | string | Virtual account bank. |
+| `lastActivityAt` | string | ISO timestamp of the last activity. |
+
+On `GET` and `POST` (and `PUT`) responses, the invoice data also includes a
+generated `paymentUrl` string.
+
+## List invoices
+
+`GET /api/v1/invoices` — List invoices. Filterable by statuses, customer IDs,
+due-date window, and free-text search. Cursor-paginated and sortable.
+
+**Operation ID:** `listInvoices` · **Auth:** `invoices.read`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `cursor` | query | string | no | Pagination cursor from the previous page's `meta.cursor`. |
+| `pageSize` | query | number | no | Page size for cursor pagination. |
+| `q` | query | string | no | Free-text search. |
+| `statuses` | query | string | no | Comma-separated statuses: `draft,scheduled,unpaid,overdue,paid,canceled,refunded`. |
+| `customerIds` | query | string | no | Comma-separated customer IDs. |
+| `dueFilter` | query | string | no | Due-date window: `overdue`, `week`, or `month`. |
+| `sort` | query | string | no | Sort order, e.g. `created_at:asc`. |
+
+**Response `200`** — `{ success: true, data: InvoiceSummary[], meta: { cursor } }`
+
+**Errors:** `401` `{ success: false, error: string }` ·
+`403` `{ success: false, error: string }`
+
+### Example
+
+```bash
+curl "https://{your-api-host}/api/v1/invoices?statuses=unpaid,overdue&customerIds=cus_123" \
+  -H "Authorization: Bearer pk_live_..."
+```
+
+## Create an invoice
+
+`POST /api/v1/invoices` — Create an invoice. Returns the invoice with a
+generated `paymentUrl`.
+
+**Operation ID:** `createInvoice` · **Auth:** `invoices.write`
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `invoiceNumber` | string | yes | Invoice number. |
+| `amount` | number | yes | Invoice amount. |
+| `customerId` | string | no | Customer billed. |
+| `virtualAccountId` | string | no | Virtual account to match payments against. |
+| `currency` | string | no | Invoice currency, default `NGN`. |
+| `status` | string | no | Invoice status, default `draft`. |
+| `issueDate` | string | no | Issue date. |
+| `dueDate` | string | no | Due date. |
+| `lineItems` | array | no | Invoice line items. |
+
+**Response `201`** — `{ success: true, data: Invoice & { paymentUrl: string } }`
+
+**Errors:** `400` `{ success: false, error: "invoiceNumber and amount are required" }`,
+`{ success: false, error: "Customer not found…" }`, or
+`{ success: false, error: "Virtual account not found…" }` ·
+`500` `{ success: false, error: "Failed to create invoice" }`
+
+### Example
+
+```bash
+curl -X POST "https://{your-api-host}/api/v1/invoices" \
+  -H "Authorization: Bearer pk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "invoiceNumber": "INV-0001",
+    "amount": 25000,
+    "customerId": "cus_123",
+    "currency": "NGN",
+    "dueDate": "2026-02-01"
+  }'
+```
+
+## Fetch an invoice
+
+`GET /api/v1/invoices/:id` — Fetch a single invoice with its `paymentUrl`.
+
+**Operation ID:** `getInvoice` · **Auth:** `invoices.read`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | Invoice ID. |
+
+**Response `200`** — `{ success: true, data: Invoice & { paymentUrl: string } }`
+
+**Errors:** `404` `{ success: false, error: "Invoice not found" }`
+
+## Update an invoice
+
+`PUT /api/v1/invoices/:id` — Update an invoice. Partial update — omitted fields
+keep their current values.
+
+**Operation ID:** `updateInvoice` · **Auth:** `invoices.write`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | Invoice ID. |
+
+**Request body** — any subset of `customerId`, `virtualAccountId`, `amount`,
+`currency`, `status`, `issueDate`, `dueDate`, `lineItems`.
+
+**Response `200`** — `{ success: true, data: Invoice & { paymentUrl: string } }`
+
+**Errors:** `404` `{ success: false, error: "Invoice not found" }` ·
+`500` `{ success: false, error: "Failed to update invoice" }`
+
+### Example
+
+```bash
+curl -X PUT "https://{your-api-host}/api/v1/invoices/inv_789" \
+  -H "Authorization: Bearer pk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dueDate": "2026-03-01"
+  }'
+```
+
+## Cancel an invoice
+
+`POST /api/v1/invoices/:id/cancel` — Cancel an invoice. Only allowed for
+non-final statuses.
+
+**Operation ID:** `cancelInvoice` · **Auth:** `invoices.write`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | Invoice ID. |
+
+**Response `200`** — `{ success: true, data: Invoice }` with `status` set to
+`canceled`.
+
+**Errors:** `400` `{ success: false, error: "Cannot cancel invoice with status <status>" }` ·
+`404` `{ success: false, error: "Invoice not found" }`
+
+### Example
+
+```bash
+curl -X POST "https://{your-api-host}/api/v1/invoices/inv_789/cancel" \
+  -H "Authorization: Bearer pk_live_..."
+```
+
+## Send an invoice
+
+`POST /api/v1/invoices/:id/send` — Send a draft invoice. Transitions `draft` →
+`unpaid` and sets `issueDate` to now.
+
+**Operation ID:** `sendInvoice` · **Auth:** `invoices.write`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | Invoice ID. |
+
+**Response `200`** — `{ success: true, data: Invoice }`
+
+**Errors:** `400` `{ success: false, error: "Only draft invoices can be sent" }` ·
+`404` `{ success: false, error: "Invoice not found" }`
+
+### Example
+
+```bash
+curl -X POST "https://{your-api-host}/api/v1/invoices/inv_789/send" \
+  -H "Authorization: Bearer pk_live_..."
+```

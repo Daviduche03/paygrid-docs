@@ -1,0 +1,86 @@
+# Transactions
+
+Transactions are reconciled payments and debits on virtual accounts. Each
+transaction carries a reconciliation status describing how PayGrid matched it
+to customers and invoices.
+
+Transaction endpoints use the `transactions.read` scope.
+
+Internal Nomba identifiers (`nombaTransactionId`, `nombaRequestId`, and
+`eventType`) are stripped from transaction responses.
+
+## Schema
+
+### Transaction
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Transaction ID. |
+| `reference` | string | Reference. |
+| `amount` | number | Transaction amount. |
+| `currency` | string | Currency. |
+| `status` | string | One of `posted`, `pending`, `failed`, `reversed`. |
+| `reconciliationStatus` | string | One of `pending`, `matched`, `underpaid`, `overpaid`, `duplicate`, `needs_review`. |
+| `type` | string | One of `credit`, `debit`. |
+| `senderName` | string | Sender name. |
+| `senderBank` | string | Sender bank. |
+| `narration` | string | Transfer narration. |
+| `occurredAt` | string | ISO timestamp. |
+| `createdAt` | string | ISO timestamp. |
+| `customerId` | string | Matched customer ID. |
+| `customerName` | string | Matched customer name. |
+| `virtualAccountId` | string | Virtual account ID. |
+| `virtualAccountName` | string | Virtual account name. |
+| `virtualAccountNumber` | string | Virtual account number. |
+| `invoiceId` | string | Matched invoice ID. |
+| `invoiceNumber` | string | Matched invoice number. |
+| `invoiceAmount` | number | Matched invoice amount. |
+| `invoiceAmountPaid` | number | Amount paid on the matched invoice. |
+
+## List transactions
+
+`GET /api/v1/transactions` — List transactions with filters on status, type,
+customer, virtual account, reconciliation status, date, and amount range.
+Cursor-paginated.
+
+**Operation ID:** `listTransactions` · **Auth:** `transactions.read`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `cursor` | query | string | no | Pagination cursor from the previous page's `meta.cursor`. |
+| `pageSize` | query | number | no | Page size for cursor pagination. |
+| `q` | query | string | no | Free-text search. |
+| `status` | query | string | no | Filter by status: `posted`, `pending`, `failed`, `reversed`. |
+| `type` | query | string | no | Filter by type: `credit`, `debit`. |
+| `customerId` | query | string | no | Filter by matched customer. |
+| `virtualAccountId` | query | string | no | Filter by virtual account. |
+| `reconciliationStatus` | query | string | no | Filter by `pending`, `matched`, `underpaid`, `overpaid`, `duplicate`, or `needs_review`. |
+| `dateFrom` | query | string | no | Filter by occurred date. |
+| `amountMin` | query | number | no | Minimum amount. |
+| `amountMax` | query | number | no | Maximum amount. |
+
+**Response `200`** — `{ success: true, data: Transaction[], meta: { cursor } }`
+
+**Errors:** `401` `{ success: false, error: string }` ·
+`403` `{ success: false, error: string }`
+
+### Example
+
+```bash
+curl "https://{your-api-host}/api/v1/transactions?status=posted&reconciliationStatus=matched&type=credit" \
+  -H "Authorization: Bearer pk_live_..."
+```
+
+## Fetch a transaction
+
+`GET /api/v1/transactions/:id` — Fetch a single transaction.
+
+**Operation ID:** `getTransaction` · **Auth:** `transactions.read`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | Transaction ID. |
+
+**Response `200`** — `{ success: true, data: Transaction }`
+
+**Errors:** `404` `{ success: false, error: "Transaction not found" }`

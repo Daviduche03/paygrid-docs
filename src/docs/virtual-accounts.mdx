@@ -1,0 +1,124 @@
+# Virtual accounts
+
+Virtual accounts (DVAs) are dedicated account numbers your customers pay into.
+Inbound bank transfers are automatically reconciled to the owning customer and
+matched against invoices.
+
+Virtual account endpoints use the `customers.read` scope for reads and
+`customers.write` for writes.
+
+Internal Nomba identifiers (such as `nombaAccountHolderId`) are stripped from
+all virtual account responses.
+
+## Schemas
+
+### VirtualAccountSummary
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Virtual account ID. |
+| `accountName` | string | Account name. |
+| `accountNumber` | string | Dedicated account number. |
+| `accountRef` | string | Your reference for the account. |
+| `bankName` | string | Bank that hosts the account. |
+| `currency` | string | Account currency (default `NGN`). |
+| `status` | string | One of `active`, `suspended`, `closed`, `expired`. |
+| `expired` | boolean | Whether the account has expired. |
+| `customerId` | string | Owning customer ID. |
+| `kind` | string | Account kind. |
+| `customerName` | string | Owning customer name. |
+| `createdAt` | string | ISO timestamp. |
+| `totalReceived` | number | Total received into the account. |
+| `lastTransactionAt` | string | ISO timestamp of the last transaction. |
+
+### VirtualAccount
+
+Extends `VirtualAccountSummary` with richer stats:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `transactionCount` | number | Number of transactions on the account. |
+| `pendingReconciliationAmount` | number | Amount awaiting reconciliation. |
+| `pendingReconciliationCount` | number | Transactions awaiting reconciliation. |
+| `lastPaymentAmount` | number | Amount of the last payment. |
+
+## List virtual accounts
+
+`GET /api/v1/virtual-accounts` — List virtual accounts for the authenticated
+business. Searchable by account name, number, bank, or customer; filterable by
+status and customer.
+
+**Operation ID:** `listVirtualAccounts` · **Auth:** `customers.read`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `cursor` | query | string | no | Pagination cursor from the previous page's `meta.cursor`. |
+| `pageSize` | query | number | no | Page size for cursor pagination. |
+| `q` | query | string | no | Search by account name, number, bank, or customer. |
+| `status` | query | string | no | Filter by status: `active`, `suspended`, `closed`, or `expired`. |
+| `customerId` | query | string | no | Filter by owning customer. |
+
+**Response `200`** — `{ success: true, data: VirtualAccountSummary[], meta: { cursor } }`
+
+**Errors:** `401` `{ success: false, error: string }` ·
+`403` `{ success: false, error: string }`
+
+### Example
+
+```bash
+curl "https://{your-api-host}/api/v1/virtual-accounts?status=active&customerId=cus_123" \
+  -H "Authorization: Bearer pk_live_..."
+```
+
+## Create a virtual account
+
+`POST /api/v1/virtual-accounts` — Provision a new dedicated virtual account.
+
+**Operation ID:** `createVirtualAccount` · **Auth:** `customers.write`
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `accountRef` | string | yes | Your reference for the account. |
+| `accountName` | string | yes | Account name. |
+| `accountNumber` | string | yes | Dedicated account number. |
+| `customerId` | string | no | Owning customer. |
+| `bankName` | string | no | Bank that hosts the account. |
+| `currency` | string | no | Account currency, default `NGN`. |
+| `expectedAmount` | number | no | Expected amount for this account. |
+
+**Response `201`** — `{ success: true, data: VirtualAccount }`
+
+**Errors:** `400` `{ success: false, error: "accountRef, accountName, and accountNumber are required" }` ·
+`500` `{ success: false, error: "Failed to create virtual account" }`
+
+### Example
+
+```bash
+curl -X POST "https://{your-api-host}/api/v1/virtual-accounts" \
+  -H "Authorization: Bearer pk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountRef": "ada-main",
+    "accountName": "Ada Lovelace",
+    "accountNumber": "0123456789",
+    "customerId": "cus_123",
+    "currency": "NGN"
+  }'
+```
+
+## Fetch a virtual account
+
+`GET /api/v1/virtual-accounts/:id` — Fetch a single virtual account with richer
+stats.
+
+**Operation ID:** `getVirtualAccount` · **Auth:** `customers.read`
+
+| Parameter | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| `id` | path | string | yes | Virtual account ID. |
+
+**Response `200`** — `{ success: true, data: VirtualAccount }`
+
+**Errors:** `404` `{ success: false, error: "Virtual account not found" }`
