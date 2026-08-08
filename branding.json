@@ -1,0 +1,10 @@
+{
+  "siteName": "PayGrid API",
+  "font": "inter",
+  "colors": {
+    "primary": "#ff5c00",
+    "accent": "#7c3aed"
+  },
+  "logo": "/logo.svg",
+  "favicon": "/favicon.svg"
+}
